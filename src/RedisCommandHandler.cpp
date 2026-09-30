@@ -91,9 +91,7 @@ std::string RedisCommandHandler::processCommand(const std::string& commandLine)
     {
 
     }
-    // key/Value Operations
-    // List Operations
-    // Hash Operations
+
     else
     {
         response << "_Error: Unkonwn command\r\n";
