@@ -10,7 +10,125 @@ RedisDatabase& RedisDatabase::getInstance()
     return instance;
 }
 
+// Common Comands
+bool RedisDatabase::flushAll()
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    kv_store.clear();
+    list_store.clear();
+    hash_store.clear();
+    return true;
+}
 
+// Key/Value Operations
+void RedisDatabase::set(const std::string& Key, const std::string& value)
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    kv_store[Key] = value;
+}
+bool RedisDatabase::get(const std::string& Key, std::string& value)
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    auto it = kv_store.find(Key);
+    if (it != kv_store.end())
+    {
+        value = it->second;
+        return true;
+    }
+    return false;
+}
+std::vector<std::string> RedisDatabase::Keys()
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    std::vector<std::string> result;
+    for (const auto& pair : kv_store)
+    {
+        result.push_back(pair.first);
+    }
+    for (const auto& pair : list_store)
+    {
+        result.push_back(pair.first);
+    }
+    for (const auto& pair : hash_store)
+    {
+        result.push_back(pair.first);
+    }
+    return result;
+}
+std::string RedisDatabase::type(const std::string& Key)
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    if (kv_store.find(Key) != kv_store.end())
+        return "string";
+    if (list_store.find(Key) != list_store.end())
+        return "list";
+    if (hash_store.find(Key) != hash_store.end())
+        return "hash";
+    else
+        return "none";
+}
+bool RedisDatabase::del(const std::string& Key)
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    bool erased = false;
+    erased |= kv_store.erase(Key) > 0;
+    erased |= list_store.erase(Key) > 0;
+    erased |= hash_store.erase(Key) > 0;
+    return false;
+
+}
+//expire
+bool RedisDatabase::expire(const std::string& Key, int  seconds)
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    bool exists = (kv_store.find(Key) != kv_store.end()) ||
+        (list_store.find(Key) != list_store.end()) ||
+        (hash_store.find(Key) != hash_store.end());
+    if (!exists)
+        return false;
+
+    expire_map[Key] = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+    return true;
+}
+//rename
+bool RedisDatabase::rename(const std::string& oldKey, const std::string& newKey)
+{
+    std::lock_guard<std::mutex> lock(db_mutex);
+    bool found = false;
+
+    auto itKv = kv_store.find(oldKey);
+    if (itKv != kv_store.end())
+    {
+        kv_store[newKey] = itKv->second;
+        kv_store.erase(itKv);
+        found = true;
+    }
+
+    auto itList = list_store.find(oldKey);
+    if (itList != list_store.end())
+    {
+        list_store[newKey] = itList->second;
+        list_store.erase(itList);
+        found = true;
+    }
+
+    auto itHash = hash_store.find(oldKey);
+    if (itHash != hash_store.end())
+    {
+        hash_store[newKey] = itHash->second;
+        hash_store.erase(itHash);
+        found = true;
+    }
+
+    auto itExpire = expire_map.find(oldKey);
+    if (itExpire != expire_map.end())
+    {
+        expire_map[newKey] = itExpire->second;
+        expire_map.erase(itExpire);
+
+    }
+    return found;
+}
 // key/Value Operations
 // List Operations
 // Hash Operations

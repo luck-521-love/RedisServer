@@ -17,7 +17,7 @@ void signalHandler(int signum)
 {
     if (globalServer)
     {
-        std::cout << "Caught signal " << signum << ", shutting down...\n";
+        std::cout << "\nCaught signal " << signum << ", shutting down...\n";
         globalServer->shutdown();
     }
     exit(signum);
@@ -39,6 +39,12 @@ void RedisServer::shutdown()
     running = false;
     if (server_socket != -1)
     {
+        if (RedisDatabase::getInstance().dump("dump.my_rdb"))
+
+            std::cout << "Database dumped to dump.my_rdb\n";
+
+        else
+            std::cerr << "Error dumping database\n";
         close(server_socket);
     }
     std::cout << "Server Shutdown Complete!\n";
@@ -111,9 +117,9 @@ void RedisServer::run()
     // Before shutdown, persist the database
     if (RedisDatabase::getInstance().dump("dump.my_rdb"))
 
-        std::cout << "Database Dumped to dump.my_rdb\n";
+        std::cout << "Database dumped to dump.my_rdb\n";
 
     else
-        std::cerr << "Error Dumping Database\n";
+        std::cerr << "Error dumping database\n";
 
 }
