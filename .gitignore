@@ -2,3 +2,5 @@ build
 
 my_redis_server
 
+dump.my_db
+
