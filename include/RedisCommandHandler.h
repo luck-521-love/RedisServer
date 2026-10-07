@@ -5,10 +5,9 @@
 
 class RedisCommandHandler
 {
-
 public:
     RedisCommandHandler();
-    //Process a command form a client and return RESP-formatted reponse.
+    // Process a command from a client and return a RESP-formatted response.
     std::string processCommand(const std::string& commandLine);
 };
 
